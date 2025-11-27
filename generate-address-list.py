@@ -9,6 +9,7 @@ except ImportError:
 import argparse
 import pathlib
 import json
+import csv
 import sys
 
 # ... [CONSTANTS REMAIN THE SAME] ...
@@ -53,18 +54,64 @@ def get_address_id(root, asset):
         
     return feature_type.attrib["ID"]
 
-def get_sanctioned_addresses(root, address_id):
-    addresses = []
-    # Use f-string for cleaner syntax
-    query = f"sdn:DistinctParties//*[@FeatureTypeID='{address_id}']"
+def get_entity_name(party_element):
+    """Extract all aliases of an entity/person from a DistinctParty element, separated by ','."""
+    names = []
     
-    for feature in root.findall(query, NAMESPACE):
-        for version_detail in feature.findall(".//sdn:VersionDetail", NAMESPACE):
-            if version_detail.text:
-                addresses.append(version_detail.text)
-    return addresses
+    # Find all aliases in the identity
+    for alias in party_element.findall(".//sdn:Profile/sdn:Identity/sdn:Alias", NAMESPACE):
+        parts = []
+        # Construct the full name from parts (e.g. First Name + Last Name)
+        for part in alias.findall(".//sdn:DocumentedName/sdn:DocumentedNamePart/sdn:NamePartValue", NAMESPACE):
+            if part.text:
+                parts.append(part.text)
+        
+        if parts:
+            names.append(" ".join(parts))
+    
+    if not names:
+        return "Unknown"
+    
+    # Return unique names separated by semicolon
+    return ";".join(dict.fromkeys(names))
 
-def write_addresses(addresses, asset, output_formats, outpath):
+def get_sanctioned_addresses(root, address_id):
+    """Extract addresses with associated entity/person names.
+    
+    Returns:
+        list of dict: Each dict contains 'address' and 'name' keys
+    """
+    address_data = []
+    
+    # Iterate over all DistinctParty elements to maintain context
+    for party in root.findall("sdn:DistinctParties/sdn:DistinctParty", NAMESPACE):
+        # Search for the specific feature within this party
+        query = f".//*[@FeatureTypeID='{address_id}']"
+        features = party.findall(query, NAMESPACE)
+        
+        if features:
+            # Get the entity name once for this party
+            entity_name = get_entity_name(party)
+            
+            for feature in features:
+                for version_detail in feature.findall(".//sdn:VersionDetail", NAMESPACE):
+                    if version_detail.text:
+                        address_data.append({
+                            'address': version_detail.text,
+                            'name': entity_name
+                        })
+    
+    return address_data
+
+def write_addresses(address_data, asset, output_formats, outpath):
+    """Write addresses with entity names to output files.
+    
+    Args:
+        address_data: list of dict with 'address' and 'name' keys
+        asset: asset type string
+        output_formats: list of output format strings
+        outpath: Path object for output directory
+    """
     # Ensure directory exists
     if not outpath.exists():
         try:
@@ -77,14 +124,15 @@ def write_addresses(addresses, asset, output_formats, outpath):
 
     if "TXT" in output_formats:
         file_path = outpath / f"{base_filename}.txt"
-        with open(file_path, 'w', encoding='utf-8') as out:
-            for address in addresses:
-                out.write(f"{address}\n")
+        with open(file_path, 'w', encoding='utf-8', newline='') as out:
+            writer = csv.writer(out, delimiter=';')
+            for item in address_data:
+                writer.writerow([item['address'], item['name']])
 
     if "JSON" in output_formats:
         file_path = outpath / f"{base_filename}.json"
         with open(file_path, 'w', encoding='utf-8') as out:
-            json.dump(addresses, out, indent=2)
+            json.dump(address_data, out, indent=2, ensure_ascii=False)
 
 def main():
     args = parse_arguments()
@@ -109,13 +157,21 @@ def main():
     for asset in assets:
         try:
             address_id = get_address_id(root, asset)
-            addresses = get_sanctioned_addresses(root, address_id)
+            address_data = get_sanctioned_addresses(root, address_id)
             
-            # Efficient deduplication and sorting
-            addresses = sorted(set(addresses))
+            # Efficient deduplication by address while preserving names
+            seen_addresses = {}
+            for item in address_data:
+                addr = item['address']
+                if addr not in seen_addresses:
+                    seen_addresses[addr] = item['name']
             
-            write_addresses(addresses, asset, output_formats, args.outpath)
-            print(f"Successfully processed {len(addresses)} addresses for {asset}")
+            # Sort and reconstruct
+            address_data = [{'address': addr, 'name': name} 
+                          for addr, name in sorted(seen_addresses.items())]
+            
+            write_addresses(address_data, asset, output_formats, args.outpath)
+            print(f"Successfully processed {len(address_data)} addresses for {asset}")
             
         except LookupError as e:
             print(f"Warning: {e}", file=sys.stderr)
