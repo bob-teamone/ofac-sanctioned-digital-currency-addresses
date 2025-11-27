@@ -2,11 +2,9 @@ name: Generate OFAC sanctioned digital currency addresses lists
 
 on:
   schedule:
-    - cron: '24 1 * * *' # Runs at 01:24 UTC
+    - cron: '24 1 * * *'
   workflow_dispatch:
 
-# SECURITY: Explicitly define permissions (Least Privilege)
-# We only need 'contents: write' to push the new lists.
 permissions:
   contents: write
 
@@ -15,58 +13,43 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # SECURITY: Pin actions to specific hashes if possible, or use major versions.
     - uses: actions/checkout@v4
       with:
-        persist-credentials: false # Good practice: creates a clean state
+        persist-credentials: false
         fetch-depth: 0 
 
     - name: Set up Python 3.11
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
-        cache: 'pip' # Cache dependencies for speed
+        # REMOVED: cache: 'pip' to fix the "No file matched" error
 
-    # SECURITY: Install the security library required by the python script
     - name: Install Dependencies
       run: |
         pip install defusedxml
 
     - name: Download the sdn_advanced.xml file
       run: |
-        # Use -q (quiet) to keep logs clean, but show errors
         wget -q https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/SDN_ADVANCED.XML
-        ls -l SDN_ADVANCED.XML
 
     - name: Generate TXT and JSON files
       run: |
         mkdir -p data
-        # Ensure the script uses the secure 'defusedxml' logic discussed previously
         python3 generate-address-list.py XBT ETH XMR LTC ZEC DASH BTG ETC BSV BCH XVG USDC USDT XRP TRX ARB BSC -f JSON TXT -path ./data -sdn SDN_ADVANCED.XML
 
     - name: Commit and Push changes
       run: |
-        # Configure git for the bot
         git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
         
-        # Switch to the target branch
         git checkout lists
-        
-        # Move data
         mv data/* .
-        
-        # Force add files (in case they are ignored)
         git add sanctioned_addresses_* -f
         
-        # Check if there are changes before committing to avoid empty commit failures
         if git diff --staged --quiet; then
           echo "No changes to commit."
         else
           git commit -m "Automatically updated lists: $(date -u)"
-          
-          # SECURITY: Use the local GITHUB_TOKEN for authentication
-          # This removes reliance on the third-party 'ad-m/github-push-action'
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
           git push origin lists
         fi
