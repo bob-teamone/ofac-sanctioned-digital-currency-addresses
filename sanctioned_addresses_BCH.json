@@ -1,9 +1,30 @@
 [
-  "18M8bJWMzWHDBMxoLqjHHAffdRy4SrzkfB",
-  "qpf2cphc5dkuclkqur7lhj2yuqq9pk3hmukle77vhq",
-  "qpusmp64rajses77x95g9ah825mtyyv74smwwkxhx3",
-  "qq3vlashthktqpeppuv7trmw070e3mydgq63zq348v",
-  "qqyuc9s700plhzr6awzru7g5z2d2p906uyrm6ht0r0",
-  "qz9f2vz3033sg5vc5mf7m7xshmj0jugy4ummf05jk8",
-  "qzjv8hrdvz6edu4gkzpnd4w6jc7zf296g5e9kkq4lx"
+  {
+    "address": "18M8bJWMzWHDBMxoLqjHHAffdRy4SrzkfB",
+    "name": "Secondeye Solution;Forwarderz"
+  },
+  {
+    "address": "qpf2cphc5dkuclkqur7lhj2yuqq9pk3hmukle77vhq",
+    "name": "SOUTHFRONT;South Front;SouthFront: Analysis & Intelligence"
+  },
+  {
+    "address": "qpusmp64rajses77x95g9ah825mtyyv74smwwkxhx3",
+    "name": "Peijnenburg Alex Adrianus Martinus;Peijnenburg Aam;Peijnenburg Alex Adrianus Martin"
+  },
+  {
+    "address": "qq3vlashthktqpeppuv7trmw070e3mydgq63zq348v",
+    "name": "SOUTHFRONT;South Front;SouthFront: Analysis & Intelligence"
+  },
+  {
+    "address": "qqyuc9s700plhzr6awzru7g5z2d2p906uyrm6ht0r0",
+    "name": "Grimm Matthew Simon"
+  },
+  {
+    "address": "qz9f2vz3033sg5vc5mf7m7xshmj0jugy4ummf05jk8",
+    "name": "Grimm Matthew Simon"
+  },
+  {
+    "address": "qzjv8hrdvz6edu4gkzpnd4w6jc7zf296g5e9kkq4lx",
+    "name": "SOUTHFRONT;South Front;SouthFront: Analysis & Intelligence"
+  }
 ]
